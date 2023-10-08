@@ -60,6 +60,7 @@ def create_database(conn, db_name):
         cursor.close()
 ```
 ### create 2 tables for complex query
+```
 # Function to create the 'departments' and 'employees' tables
 def create_tables(conn):
     try:
@@ -81,6 +82,7 @@ def create_tables(conn):
         conn.commit()
     except mysql.connector.Error as e:
         print(e)
+```
 
 ### insert sample employee sample data
 ```python
