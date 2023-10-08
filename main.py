@@ -70,8 +70,10 @@ def insert_sample_data(conn):
         
         # Insert employees with department assignments
         cursor.execute("INSERT INTO employees (employee_name, department_id)"
-                       " VALUES ('John Doe', 1), ('Jane Smith', 1), ('Alice Johnson', 2),"
-                        " ('Bob Anderson', 2), ('Charlie Brown', 3), ('David Wilson', 3), ('Eve Adams', 4)")
+                    " VALUES ('John Doe', 1), ('Jane Smith', 1),"
+                    " ('Alice Johnson', 2),"
+                    " ('Bob Anderson', 2), ('Charlie Brown', 3), "
+                    "('David Wilson', 3), ('Eve Adams', 4)")
         
         conn.commit()
     except mysql.connector.Error as e:
