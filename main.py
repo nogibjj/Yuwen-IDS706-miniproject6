@@ -8,7 +8,8 @@ def connect_to_rds():
             'user': 'admin',
             'password': 'hhxkHH0dBUcum2j49Xor',
             'host': 'miniproj-706.clddqsj3el9y.us-east-1.rds.amazonaws.com',
-            'ssl_verify_identity': False,  # Enable SSL for a secure connection (recommended)
+            'ssl_verify_identity': False,  
+            # Enable SSL for a secure connection (recommended)
         }
         
         conn = mysql.connector.connect(**config)
@@ -64,10 +65,13 @@ def insert_sample_data(conn):
     try:
         cursor = conn.cursor()
         # Insert departments
-        cursor.execute("INSERT INTO departments (department_name) VALUES ('HR'), ('Finance'), ('IT'), ('Marketing')")
+        cursor.execute("INSERT INTO departments (department_name)"
+                       " VALUES ('HR'), ('Finance'), ('IT'), ('Marketing')")
         
         # Insert employees with department assignments
-        cursor.execute("INSERT INTO employees (employee_name, department_id) VALUES ('John Doe', 1), ('Jane Smith', 1), ('Alice Johnson', 2), ('Bob Anderson', 2), ('Charlie Brown', 3), ('David Wilson', 3), ('Eve Adams', 4)")
+        cursor.execute("INSERT INTO employees (employee_name, department_id)"
+                       " VALUES ('John Doe', 1), ('Jane Smith', 1), ('Alice Johnson', 2),"
+                        " ('Bob Anderson', 2), ('Charlie Brown', 3), ('David Wilson', 3), ('Eve Adams', 4)")
         
         conn.commit()
     except mysql.connector.Error as e:
