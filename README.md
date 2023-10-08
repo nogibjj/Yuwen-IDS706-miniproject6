@@ -1,6 +1,6 @@
 # Yuwen-Cai-week5-mini-repo  
 
-[![cicd](https://github.com/nogibjj/Yuwen-IDS706-miniproject5/actions/workflows/cicd.yml/badge.svg)](https://github.com/nogibjj/Yuwen-IDS706-miniproject5/actions/workflows/cicd.yml)  
+[![cicd](https://github.com/nogibjj/Yuwen-IDS706-miniproject6/actions/workflows/cicd.yml/badge.svg)](https://github.com/nogibjj/Yuwen-IDS706-miniproject6/actions/workflows/cicd.yml)  
 
 This is a repo for course 706_Data_Engineering Week 6 Mini Project. This objective was to Design a complex SQL query for a MySQL database and explain the results.
 
@@ -16,6 +16,8 @@ This is a repo for course 706_Data_Engineering Week 6 Mini Project. This objecti
 
 3. Test code by using `make test`
 
+4. The database is created in AWS RDS with MYSQL.
+
 
 ## Code Location
 You can find all the relevant code in Python with SQL database in main.py
@@ -26,76 +28,111 @@ For the "CRUD" with database part:
 
 ### connect 
 ```python
-def create_connection(db_file):
-    conn = None
+def connect_to_rds():
     try:
-        conn = sqlite3.connect(db_file)
+        # Replace these variables with your own RDS information
+        config = {
+            'user': 'admin',
+            'password': '***',
+            'host': '***,
+            'ssl_verify_identity': False,  
+            # Enable SSL for a secure connection (recommended)
+        }
+        
+        conn = mysql.connector.connect(**config)
         return conn
-    except sqlite3.Error as e:
-        print(e)
+    except mysql.connector.Error as e:
+        print(f"Error: {e}")
+        return None
 ```
 
-### create
+### create database because RDS does not have a default one
 ```python
-def create_table(conn):
+def create_database(conn, db_name):
+    try:
+        cursor = conn.cursor()
+        create_db_query = f"CREATE DATABASE {db_name};"
+        cursor.execute(create_db_query)
+        conn.commit()
+    except mysql.connector.Error as e:
+        print(f"Error creating database: {e}")
+    finally:
+        cursor.close()
+```
+### create 2 tables for complex query
+```
+# Function to create the 'departments' and 'employees' tables
+def create_tables(conn):
     try:
         cursor = conn.cursor()
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY,
-                username TEXT NOT NULL,
-                email TEXT NOT NULL
+            CREATE TABLE IF NOT EXISTS departments (
+                department_id INT AUTO_INCREMENT PRIMARY KEY,
+                department_name VARCHAR(255) NOT NULL
             )
         ''')
-    except sqlite3.Error as e:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS employees (
+                employee_id INT AUTO_INCREMENT PRIMARY KEY,
+                employee_name VARCHAR(255) NOT NULL,
+                department_id INT,
+                FOREIGN KEY (department_id) REFERENCES departments(department_id)
+            )
+        ''')
+        conn.commit()
+    except mysql.connector.Error as e:
         print(e)
 ```
 
-### insert
+### insert sample employee sample data
 ```python
-def insert_user(conn, username, email):
+def insert_sample_data(conn):
     try:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)",
-                        (username, email))
+        # Insert departments
+        cursor.execute("INSERT INTO departments (department_name)"
+                       " VALUES ('HR'), ('Finance'), ('IT'), ('Marketing')")
+        
+        # Insert employees with department assignments
+        cursor.execute("INSERT INTO employees (employee_name, department_id)"
+                    " VALUES ('John Doe', 1), ('Jane Smith', 1),"
+                    " ('Alice Johnson', 2),"
+                    " ('Bob Anderson', 2), ('Charlie Brown', 3), "
+                    "('David Wilson', 3), ('Eve Adams', 4)")
+        
         conn.commit()
-    except sqlite3.Error as e:
+    except mysql.connector.Error as e:
         print(e)
 ```
 
-### update
-```python
-def update_user_email(conn, username, new_email):
+### Complex Query Function: complex SQL query retrieves information about employees and their associated departments, along with a count of employees within each department. 
+```
+def execute_complex_query(conn):
     try:
         cursor = conn.cursor()
-        cursor.execute("UPDATE users SET email=? WHERE username=?",
-                        (new_email, username))
-        conn.commit()
-    except sqlite3.Error as e:
+        sql_query = """
+        SELECT
+            e.employee_id,
+            e.employee_name,
+            d.department_name,
+            COUNT(*) OVER(PARTITION BY d.department_id) AS department_employee_count
+        FROM employees e
+        JOIN departments d ON e.department_id = d.department_id;
+        """
+        cursor.execute(sql_query)
+        results = cursor.fetchall()
+        return results
+    except mysql.connector.Error as e:
         print(e)
 ```
-
-### delete
-```python
-def delete_user(conn, username):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM users WHERE username=?", (username,))
-        conn.commit()
-    except sqlite3.Error as e:
-        print(e)
-```
-
-
-All the functions are tested in test_main.py
-
-### Two Query Function
-1. select all users from the database
-2. choose the person with shortest email
 
 ### result:
 Result Running main.py:
+![Alt text](<main_result.png>)
+
+Result Running test_main.py locally:
+![Alt text](<test_result_local.png>)
+
+Result Running make test in GitHub actions:
 ![Alt text](<test_result.png>)
 
-Result Running make test:
-![Alt text](<main_result.png>)
