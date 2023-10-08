@@ -2,11 +2,11 @@
 
 [![cicd](https://github.com/nogibjj/Yuwen-IDS706-miniproject5/actions/workflows/cicd.yml/badge.svg)](https://github.com/nogibjj/Yuwen-IDS706-miniproject5/actions/workflows/cicd.yml)  
 
-This is a repo template for course 706_Data_Engineering Week 5 Mini Project. This objective was to create a Python script that interacts with an SQL database.
+This is a repo for course 706_Data_Engineering Week 6 Mini Project. This objective was to Design a complex SQL query for a MySQL database and explain the results.
 
 # Purpose
-- Create a SQL database with Python
-- Perform CRUD operations
+- Create a MYSQL database in Cloud platform
+- Perform a complex query operation
 
 
 ## Preparation
