@@ -14,3 +14,7 @@ pandas == 2.1.0
 #rust based linter
 ruff==0.0.284
 boto3==1.24.87
+
+#sql
+mysql-connector-python==8.0.28
+SQLAlchemy==1.4.27

@@ -1,131 +1,119 @@
-import sqlite3
+import mysql.connector
 
 # Function to create a database connection
-def create_connection(db_file):
-    conn = None
+def connect_to_rds():
     try:
-        conn = sqlite3.connect(db_file)
+        # Replace these variables with your own RDS information
+        config = {
+            'user': 'admin',
+            'password': 'hhxkHH0dBUcum2j49Xor',
+            'host': 'miniproj-706.clddqsj3el9y.us-east-1.rds.amazonaws.com',
+            'ssl_verify_identity': False,  # Enable SSL for a secure connection (recommended)
+        }
+        
+        conn = mysql.connector.connect(**config)
         return conn
-    except sqlite3.Error as e:
-        print(e)
+    except mysql.connector.Error as e:
+        print(f"Error: {e}")
+        return None
 
-# Function to create the 'users' table if it doesn't exist
-def create_table(conn):
+# Manuual Create a database because rds does not provide a default one
+def create_database(conn, db_name):
+    try:
+        cursor = conn.cursor()
+        create_db_query = f"CREATE DATABASE {db_name};"
+        cursor.execute(create_db_query)
+        conn.commit()
+    except mysql.connector.Error as e:
+        print(f"Error creating database: {e}")
+    finally:
+        cursor.close()
+
+# Function to execute a single written query
+def execute_query(conn, query):
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(query)
+    result = cursor.fetchall()
+    cursor.close()
+    return result
+
+# Function to create the 'departments' and 'employees' tables
+def create_tables(conn):
     try:
         cursor = conn.cursor()
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY,
-                username TEXT NOT NULL,
-                email TEXT NOT NULL
+            CREATE TABLE IF NOT EXISTS departments (
+                department_id INT AUTO_INCREMENT PRIMARY KEY,
+                department_name VARCHAR(255) NOT NULL
             )
         ''')
-    except sqlite3.Error as e:
-        print(e)
-
-# Function to insert a new user into the database
-def insert_user(conn, username, email):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)",
-                        (username, email))
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS employees (
+                employee_id INT AUTO_INCREMENT PRIMARY KEY,
+                employee_name VARCHAR(255) NOT NULL,
+                department_id INT,
+                FOREIGN KEY (department_id) REFERENCES departments(department_id)
+            )
+        ''')
         conn.commit()
-    except sqlite3.Error as e:
+    except mysql.connector.Error as e:
         print(e)
 
-# Function to retrieve a user by username
-def get_user_by_username(conn, username):
+# Function to insert sample data into departments and employees tables
+def insert_sample_data(conn):
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE username=?", (username,))
-        return cursor.fetchone()
-    except sqlite3.Error as e:
-        print(e)
-
-# Function to update a user's email by username
-def update_user_email(conn, username, new_email):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("UPDATE users SET email=? WHERE username=?",
-                        (new_email, username))
+        # Insert departments
+        cursor.execute("INSERT INTO departments (department_name) VALUES ('HR'), ('Finance'), ('IT'), ('Marketing')")
+        
+        # Insert employees with department assignments
+        cursor.execute("INSERT INTO employees (employee_name, department_id) VALUES ('John Doe', 1), ('Jane Smith', 1), ('Alice Johnson', 2), ('Bob Anderson', 2), ('Charlie Brown', 3), ('David Wilson', 3), ('Eve Adams', 4)")
+        
         conn.commit()
-    except sqlite3.Error as e:
+    except mysql.connector.Error as e:
         print(e)
 
-# Function to delete a user by username
-def delete_user(conn, username):
+# Function to execute the complex SQL query
+def execute_complex_query(conn):
     try:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM users WHERE username=?", (username,))
-        conn.commit()
-    except sqlite3.Error as e:
-        print(e)
-
-# Query Function to retrieve all users
-def select_all_users(conn):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users")
-        rows = cursor.fetchall()
-        return rows
-    except sqlite3.Error as e:
-        print(e)
-
-# Query Function to select person with shortest email
-def select_person_with_shortest_email(conn):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users ORDER BY LENGTH(email) ASC LIMIT 1")
-        person = cursor.fetchone()
-        return person
-    except sqlite3.Error as e:
+        sql_query = """
+        SELECT
+            e.employee_id,
+            e.employee_name,
+            d.department_name,
+            COUNT(*) OVER(PARTITION BY d.department_id) AS department_employee_count
+        FROM employees e
+        JOIN departments d ON e.department_id = d.department_id;
+        """
+        cursor.execute(sql_query)
+        results = cursor.fetchall()
+        return results
+    except mysql.connector.Error as e:
         print(e)
 
 if __name__ == "__main__":
-    database_file = "my_database.db"
-    connection = create_connection(database_file)
-    if connection:
-        create_table(connection)
+    conn = connect_to_rds()
+    if conn:
+        # Create a new database
+        new_db_name = 'employee_database'
+        create_database(conn, new_db_name)
 
-        # Create a new user
-        insert_user(connection, "JohnDoe", "john@example.com")
+        # Switch to the newly created database
+        switch_db_query = f"USE {new_db_name};"
+        execute_query(conn, switch_db_query)
 
-        # Read a user
-        user = get_user_by_username(connection, "JohnDoe")
-        if user:
-            print("User found:", user)
+        # Create tables and insert sample data
+        create_tables(conn)
+        insert_sample_data(conn)
 
-        # Update user email
-        update_user_email(connection, "JohnDoe", "new_email@example.com")
+        # Perform a complex query involving two tables
+        result = execute_complex_query(conn)
 
-        # Read the updated user
-        updated_user = get_user_by_username(connection, "JohnDoe")
-        if updated_user:
-            print("Updated user:", updated_user)
-
-        # Delete the user
-        delete_user(connection, "JohnDoe")
-
-        # user with shortest email
-        insert_user(connection, "Apple", "a@example.com")
-        insert_user(connection, "Banana", "Banana@example.com")
-        insert_user(connection, "Orange", "ora@example.com")
-        person = select_person_with_shortest_email(connection)
-
-        if person:
-            print("Person with the shortest email:")
-            print("User ID:", person[0])
-            print("Username:", person[1])
-            print("Email:", person[2])
+        if result:
+            for row in result:
+                print(f"Department: {row[0]}, Employee Name: {row[1]}")
         else:
-            print("No users in the database.")
+            print("No results.")
 
-        # select all users
-        users = select_all_users(connection)
-
-        for user in users:
-            print("User ID:", user[0])
-            print("Username:", user[1])
-            print("Email:", user[2])
-
-        connection.close()
+        conn.close()

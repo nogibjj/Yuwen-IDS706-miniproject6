@@ -1,78 +1,64 @@
-from main import create_connection, create_table, insert_user
-from main import get_user_by_username, update_user_email, delete_user
-from main import select_all_users, select_person_with_shortest_email
-def test_insert_user():
-    database_file = "test_database.db"
-    connection = create_connection(database_file)
-    create_table(connection)
+import unittest
+import main
 
-    insert_user(connection, "AliceSmith", "alice@example.com")
-    user = get_user_by_username(connection, "AliceSmith")
-    connection.close()
+class TestMainFunctions(unittest.TestCase):
 
-    assert user is not None
-    assert user[2] == "alice@example.com"
+    def setUp(self):
+        self.conn = main.connect_to_rds()
+        self.new_db_name = 'test_employee_database'
 
-def test_update_user_email():
-    database_file = "test_database.db"
-    connection = create_connection(database_file)
-    create_table(connection)
+    def tearDown(self):
+        if self.conn:
+            cursor = self.conn.cursor()
+            drop_db_query = f"DROP DATABASE IF EXISTS {self.new_db_name};"
+            cursor.execute(drop_db_query)
+            self.conn.close()
 
-    insert_user(connection, "BobJohnson", "bob@example.com")
-    update_user_email(connection, "BobJohnson", "new_email@example.com")
-    user = get_user_by_username(connection, "BobJohnson")
-    connection.close()
+    def test_connect_to_rds(self):
+        self.assertIsNotNone(self.conn)
 
-    assert user is not None
-    assert user[2] == "new_email@example.com"
-
-def test_delete_user():
-    database_file = "test_database.db"
-    connection = create_connection(database_file)
-    create_table(connection)
-
-    insert_user(connection, "CharlieBrown", "charlie@example.com")
-    delete_user(connection, "CharlieBrown")
-    user = get_user_by_username(connection, "CharlieBrown")
-    connection.close()
-
-    assert user is None
-
-def test_select_person_with_shortest_email():
-    database_file = "test_database.db"
-    connection = create_connection(database_file)
-    create_table(connection)
-
-    # Insert users with different email lengths
-    insert_user(connection, "AliceSmith", "alice@example.com")
-    insert_user(connection, "BobJohnson", "b@example.com")
-    insert_user(connection, "CharlieBrown", "charlie@example.com")
-
-    person = select_person_with_shortest_email(connection)
-    connection.close()
-
-    assert person is not None
-    assert person[1] == "BobJohnson"  # Assert the BobJohnson with the shortest email
+    def test_create_database(self):
+        cursor = self.conn.cursor()
+        main.create_database(self.conn, self.new_db_name)
+        cursor.execute(f"USE {self.new_db_name};")
+        cursor.execute("SELECT 1;")  # Execute a simple query to have a result set.
+        result = cursor.fetchone()
+        self.assertIsNotNone(result, "Failed to create the database")
+        if result:
+            self.assertEqual(result[0], 1)  # Verify the query result.
 
 
-def test_select_all_users():
-    database_file = "new_full_database.db"
-    connection = create_connection(database_file)
-    create_table(connection)
+    def test_create_tables(self):
+        main.create_database(self.conn, self.new_db_name)
+        cursor = self.conn.cursor()
+        cursor.execute(f"USE {self.new_db_name};")
+        main.create_tables(self.conn)
+        cursor.execute("SHOW TABLES;")
+        tables = [table[0] for table in cursor.fetchall()]
+        self.assertIn('departments', tables)
+        self.assertIn('employees', tables)
 
-    # Insert test users
-    insert_user(connection, "AliceSmith", "alice@example.com")
-    insert_user(connection, "BobJohnson", "bob@example.com")
-    insert_user(connection, "CharlieBrown", "charlie@example.com")
+    def test_insert_sample_data(self):
+        main.create_database(self.conn, self.new_db_name)
+        cursor = self.conn.cursor()
+        cursor.execute(f"USE {self.new_db_name};")
+        main.create_tables(self.conn)
+        main.insert_sample_data(self.conn)
+        cursor.execute("SELECT COUNT(*) FROM departments;")
+        department_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM employees;")
+        employee_count = cursor.fetchone()[0]
+        self.assertEqual(department_count, 4)
+        self.assertEqual(employee_count, 7)
 
-    users = select_all_users(connection)
-    connection.close()
-    assert len(users) == 3  # Assert the number of retrieved users
+    def test_execute_complex_query(self):
+        main.create_database(self.conn, self.new_db_name)
+        cursor = self.conn.cursor()
+        cursor.execute(f"USE {self.new_db_name};")
+        main.create_tables(self.conn)
+        main.insert_sample_data(self.conn)
+        results = main.execute_complex_query(self.conn)
+        self.assertEqual(len(results), 7)
 
-
-if __name__ == "__main__":
-    test_insert_user()
-    test_update_user_email()
-    test_delete_user()
-    test_select_person_with_shortest_email()
-    test_select_all_users()
+if __name__ == '__main__':
+    unittest.main()
