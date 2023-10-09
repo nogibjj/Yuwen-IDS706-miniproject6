@@ -1,4 +1,4 @@
-# Yuwen-Cai-week5-mini-repo  
+# Yuwen-Cai-week6-mini-repo  
 
 [![cicd](https://github.com/nogibjj/Yuwen-IDS706-miniproject6/actions/workflows/cicd.yml/badge.svg)](https://github.com/nogibjj/Yuwen-IDS706-miniproject6/actions/workflows/cicd.yml)  
 
